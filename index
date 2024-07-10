@@ -1,0 +1,268 @@
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+
+const nivellsAssoliment = ['AE', 'AN', 'AS', 'NA'];
+
+const BancDeFrases = ({ bancFrases, setBancFrases, assignatures, setAssignatures }) => {
+  const [nouItem, setNouItem] = useState('');
+  const [novaAssignatura, setNovaAssignatura] = useState('');
+
+  const afegirItem = (assignatura) => {
+    if (nouItem.trim()) {
+      setBancFrases(prev => ({
+        ...prev,
+        [assignatura]: {
+          ...prev[assignatura],
+          [nouItem.trim()]: { AE: '', AN: '', AS: '', NA: '' }
+        }
+      }));
+      setNouItem('');
+    }
+  };
+
+  const afegirAssignatura = () => {
+    if (novaAssignatura.trim() && !assignatures.includes(novaAssignatura.trim())) {
+      setAssignatures(prev => [...prev, novaAssignatura.trim()]);
+      setBancFrases(prev => ({...prev, [novaAssignatura.trim()]: {}}));
+      setNovaAssignatura('');
+    }
+  };
+
+  const handleFraseChange = (assignatura, item, nivell, frase) => {
+    setBancFrases(prev => ({
+      ...prev,
+      [assignatura]: {
+        ...prev[assignatura],
+        [item]: {
+          ...prev[assignatura][item],
+          [nivell]: frase
+        }
+      }
+    }));
+  };
+
+  return (
+    <div className="p-4">
+      <h2 className="text-2xl font-bold mb-4">Banc de Frases</h2>
+      <div className="mb-4">
+        <Input
+          type="text"
+          placeholder="Nova assignatura"
+          value={novaAssignatura}
+          onChange={(e) => setNovaAssignatura(e.target.value)}
+        />
+        <Button onClick={afegirAssignatura} className="mt-2">Afegir Assignatura</Button>
+      </div>
+      <Tabs defaultValue={assignatures[0]}>
+        <TabsList>
+          {assignatures.map(assignatura => (
+            <TabsTrigger key={assignatura} value={assignatura}>{assignatura}</TabsTrigger>
+          ))}
+        </TabsList>
+        {assignatures.map(assignatura => (
+          <TabsContent key={assignatura} value={assignatura}>
+            <Card>
+              <CardHeader>
+                <CardTitle>{assignatura}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="mb-4">
+                  <Input
+                    type="text"
+                    placeholder="Nou ítem"
+                    value={nouItem}
+                    onChange={(e) => setNouItem(e.target.value)}
+                  />
+                  <Button onClick={() => afegirItem(assignatura)} className="mt-2">Afegir Ítem</Button>
+                </div>
+                {Object.entries(bancFrases[assignatura] || {}).map(([item, frases]) => (
+                  <div key={item} className="mb-4">
+                    <h3 className="text-lg font-semibold mb-2">{item}</h3>
+                    {nivellsAssoliment.map(nivell => (
+                      <div key={nivell} className="mb-2">
+                        <label className="block text-sm font-medium mb-1">{nivell}:</label>
+                        <Input
+                          type="text"
+                          placeholder={`Frase per a ${nivell}`}
+                          value={frases[nivell] || ''}
+                          onChange={(e) => handleFraseChange(assignatura, item, nivell, e.target.value)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
+  );
+};
+
+const InformeNotes = () => {
+  const [assignatures, setAssignatures] = useState(['Català', 'Castellà', 'Matemàtiques', 'Medi']);
+  const [bancFrases, setBancFrases] = useState({});
+  const [notes, setNotes] = useState({});
+  const [informe, setInforme] = useState('');
+  const [vistaActual, setVistaActual] = useState('informe');
+  const [opcionsInforme, setOpcionsInforme] = useState({
+    mostrarAssignatures: true,
+    mostrarItems: true,
+    mostrarNotes: true,
+  });
+  const [nomsAssignatures, setNomsAssignatures] = useState({});
+
+  const handleNoteChange = (assignatura, item, nota) => {
+    setNotes(prev => ({
+      ...prev,
+      [assignatura]: {
+        ...prev[assignatura],
+        [item]: nota
+      }
+    }));
+  };
+
+  const handleOpcioChange = (opcio) => {
+    setOpcionsInforme(prev => ({...prev, [opcio]: !prev[opcio]}));
+  };
+
+  const handleNomAssignaturaChange = (assignatura, nouNom) => {
+    setNomsAssignatures(prev => ({...prev, [assignatura]: nouNom}));
+  };
+
+  const generarInforme = () => {
+    let informeText = "Informe de notes:\n\n";
+    
+    assignatures.forEach(assignatura => {
+      const nomMostrat = nomsAssignatures[assignatura] || assignatura;
+      if (opcionsInforme.mostrarAssignatures) {
+        informeText += `${nomMostrat}:\n`;
+      }
+      Object.entries(bancFrases[assignatura] || {}).forEach(([item, frases]) => {
+        const notaItem = notes[assignatura]?.[item] || 'No avaluat';
+        const frase = frases[notaItem] || '';
+        if (opcionsInforme.mostrarItems) {
+          informeText += `  - ${item}`;
+          if (opcionsInforme.mostrarNotes) {
+            informeText += `: ${notaItem}`;
+          }
+          informeText += '\n';
+        }
+        if (frase) {
+          informeText += `    ${frase}\n`;
+        }
+      });
+      informeText += '\n';
+    });
+
+    setInforme(informeText);
+  };
+
+  return (
+    <div className="p-4 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">Generador d'Informes de Notes</h1>
+      
+      <div className="mb-4">
+        <Button onClick={() => setVistaActual('informe')} className="mr-2">Informe</Button>
+        <Button onClick={() => setVistaActual('bancDeFrases')}>Banc de Frases</Button>
+      </div>
+
+      {vistaActual === 'informe' ? (
+        <>
+          <Card className="mb-4">
+            <CardHeader>
+              <CardTitle>Opcions de l'informe</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2 mb-2">
+                <Checkbox 
+                  id="mostrarAssignatures" 
+                  checked={opcionsInforme.mostrarAssignatures} 
+                  onCheckedChange={() => handleOpcioChange('mostrarAssignatures')}
+                />
+                <Label htmlFor="mostrarAssignatures">Mostrar noms d'assignatures</Label>
+              </div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Checkbox 
+                  id="mostrarItems" 
+                  checked={opcionsInforme.mostrarItems} 
+                  onCheckedChange={() => handleOpcioChange('mostrarItems')}
+                />
+                <Label htmlFor="mostrarItems">Mostrar ítems</Label>
+              </div>
+              <div className="flex items-center space-x-2 mb-2">
+                <Checkbox 
+                  id="mostrarNotes" 
+                  checked={opcionsInforme.mostrarNotes} 
+                  onCheckedChange={() => handleOpcioChange('mostrarNotes')}
+                />
+                <Label htmlFor="mostrarNotes">Mostrar notes</Label>
+              </div>
+            </CardContent>
+          </Card>
+
+          {assignatures.map(assignatura => (
+            <Card key={assignatura} className="mb-4">
+              <CardHeader>
+                <CardTitle>
+                  <Input 
+                    value={nomsAssignatures[assignatura] || assignatura} 
+                    onChange={(e) => handleNomAssignaturaChange(assignatura, e.target.value)}
+                    className="font-bold"
+                  />
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {Object.keys(bancFrases[assignatura] || {}).map(item => (
+                  <div key={item} className="mb-2">
+                    <label className="block text-sm font-medium mb-1">{item}:</label>
+                    <Select onValueChange={(value) => handleNoteChange(assignatura, item, value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona el nivell" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {nivellsAssoliment.map(nivell => (
+                          <SelectItem key={nivell} value={nivell}>{nivell}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ))}
+
+          <Button onClick={generarInforme} className="mb-4">Generar Informe</Button>
+
+          {informe && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Informe Generat</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Textarea value={informe} readOnly rows={10} />
+              </CardContent>
+            </Card>
+          )}
+        </>
+      ) : (
+        <BancDeFrases 
+          bancFrases={bancFrases} 
+          setBancFrases={setBancFrases}
+          assignatures={assignatures}
+          setAssignatures={setAssignatures}
+        />
+      )}
+    </div>
+  );
+};
+
+export default InformeNotes;
